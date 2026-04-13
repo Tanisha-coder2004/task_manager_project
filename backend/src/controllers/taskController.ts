@@ -1,24 +1,22 @@
 
 import { taskService } from "../services/taskService";
-import { ITaskRepository } from "../domain/repositories/ITaskRepository";
-import { MongoTaskRepo } from "../infrastructure/database/mongoose/MongoTaskRepo";
-import { Request, Response } from "express";
-import { InMemoryTaskRepo } from "../infrastructure/database/in_memory/InMemoryTaskRepo";
-
+import { NextFunction, Request, Response } from "express";
+import { AppError } from "../utils/AppError";
 
 export class TaskController {
     constructor(private TaskService: taskService) {}
 
 
-    createTask = async (req: Request, res: Response) => {
+    createTask = async (req: Request, res: Response,next:NextFunction) => {
         
         try {
             const { title, description } = req.body;
             if (!title || !description) {
-                return res.status(400).json({
-                    success: false,
-                    message: "kindly fill all field"
-                })
+                // return res.status(400).json({
+                //     success: false,
+                //     message: "kindly fill all field"
+                // })
+                next(new AppError("Kindly fill all field",400))
             }
            
             const createdTask = await this.TaskService.createTask(Date.now().toString(), title, description);
@@ -28,21 +26,18 @@ export class TaskController {
                 createdTask
             })
         } catch (error: any) {
-            return res.status(500).json({
-                success: false,
-                message: error.message
-            })
+            next(error)
         }
     }
 
 
-    deleteTask = async (req: Request, res: Response) => {
+    deleteTask = async (req: Request, res: Response,next:NextFunction) => {
         try {
             const { id } = req.params as { id: string };
             console.log("Deleting task with ID:", id);
            
             const result = await this.TaskService.deleteTask(id);
-            console.log("Delete result:", result);
+            // console.log("Delete result:", result);
 
             return res.status(200).json({
                 success: true,
@@ -51,21 +46,15 @@ export class TaskController {
             })
 
         } catch (error: any) {
-            return res.status(500).json({
-                success: false,
-                message: error.message
-            })
+            next(error)
         }
     }
 
 
-    updateTask = async (req: Request, res: Response) => {
+    updateTask = async (req: Request, res: Response,next:NextFunction) => {
         try {
              const {id} = req.params as { id: string };
             const { title, description } = req.body;
-            console.log("id : ",id)
-            console.log("title : ",title)
-           
             await this.TaskService.updateTask(id, title, description);
             return res.status(200).json({
                 success: true,
@@ -73,39 +62,29 @@ export class TaskController {
             })
 
         } catch (error: any) {
-            return res.status(500).json({
-                success: false,
-                message: error.message
-            })
+            next(error)
         }
     }
 
 
 
-    getAllTask = async (req: Request, res: Response) => {
+    getAllTask = async (req: Request, res: Response,next:NextFunction) => {
         try {
            
             const allTask = await this.TaskService.getAllTask();
-            const total: number = allTask?.length ?? 0;
-            const completedTask: number = allTask?.filter(task => task.completed).length ?? 0;
-            const pending = total - completedTask;
-            return res.status(200).json({
-                success: true,
-                message: "returned all task",
-                stats: { total, completedTask, pending },
-                allTask
-            })
+            const dashboardData = await this.TaskService.getDashBoardStats();
+             res.status(200).json({
+                success:true,
+                ...dashboardData
+             })
         } catch (error: any) {
-            return res.status(500).json({
-                success: false,
-                message: error.message
-            })
+            next(error)
         }
     }
 
 
 
-    toggleTaskStatus = async (req: Request, res: Response) => {
+    toggleTaskStatus = async (req: Request, res: Response,next:NextFunction) => {
         try {
             const { id } = req.params as {id:string};
             
@@ -117,10 +96,7 @@ export class TaskController {
             })
 
         } catch (error: any) {
-            return res.status(500).json({
-                success: false,
-                message: error.message
-            })
+            next(error)
         }
     }
 }
